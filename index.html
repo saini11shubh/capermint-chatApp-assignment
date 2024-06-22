@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatApp</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <link rel="stylesheet" href="../Css/style.css">
+    <style>
+        .logo {
+            display: block;
+            margin: auto;
+            width: 50px;
+            height: 50px;
+        }
+
+        body {
+            height: 100vh;
+            background-image: linear-gradient(rgb(255, 255, 255), rgb(240, 224, 240));
+        }
+
+        .container {
+            max-width: 995px;
+            background: transparent;
+            margin: auto;
+            height: 60vh;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+
+        }
+
+        .user-chat {
+            background-color: rgb(177 174 168);
+            border: 1px solid black;
+            padding: 33px;
+            padding-left: 0;
+            padding-right: 0;
+            margin-bottom: 0px;
+            border-radius: 10px;
+            width: 96%;
+            position: relative;
+
+        }
+
+        .user-chat-live {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .send {
+            position: absolute;
+            bottom: 10px;
+            width: 97%;
+            left: 0;
+            right: 0;
+            padding-bottom: 10px;
+            padding-left: 10px;
+            padding-right: 10px;
+            background: rgb(228, 221, 208);
+            padding-top: 10px;
+        }
+
+        .live-user {
+            width: 20%;
+            background-color: #31232357;
+            border: 2px solid #736b6b;
+            height: 100%;
+            border-radius: 41px;
+        }
+
+        .live-user ul li {
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all .4s linear;
+        }
+
+        .live-user ul li:hover {
+            color: blue;
+        }
+
+        .user-chat {
+            padding-bottom: 100px;
+        }
+
+        .message {
+            background-color: rgb(180, 169, 169);
+            width: 24%;
+            padding: 10px;
+            margin: 17px 12px;
+            border: 2px solid black;
+            border-radius: 10px;
+        }
+
+        .left {
+            float: left;
+            clear: both;
+            background-color: rgb(246, 250, 247);
+            color: black;
+
+        }
+
+        .right {
+            float: right;
+            clear: both;
+            background-color: rgb(95, 185, 122);
+            color: black;
+        }
+
+        .companyName {
+            display: flex;
+            justify-content: center;
+            /* Centers horizontally */
+            align-items: center;
+            /* Centers vertically */
+        }
+
+        #send-container {
+            display: block;
+            margin: auto;
+            text-align: center;
+            width: 100%;
+        }
+
+        #messageInp {
+            width: 92%;
+            border: 2px solid black;
+            border-radius: 6px;
+            height: 34px;
+        }
+
+        .btn {
+            cursor: pointer;
+            border: 2px solid black;
+            border-radius: 6px;
+            height: 34px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="companyName">
+        <h1>Capermint Chat Application</h1>
+    </nav>
+
+    <div class="container">.
+        <div class="live-user">
+            <h2 style="margin: 10%;">Online User</h2>
+            <div class="OnlineUserContainer" id="test2">
+            </div>
+
+        </div>
+        <div class="user-chat">
+            <div class="user-chat-live" id="text-box"></div>
+
+            <div class="send">
+                <from action="#" id="send-container">
+                    <input type="text" name="messageInp" id="messageInp">
+                    <button class="btn" onclick="sendmsg()" type="button">Send</button>
+                </from>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+<script>
+    const socket = io();
+    const container = document.querySelector('.container');
+    // Scroll the container element to the bottom
+    const nameChatter = prompt("Enter your name to join");
+    if (nameChatter.length == 0) {
+        nameChatter = "Unknown User"
+    }
+    socket.emit("new-user-joined", nameChatter);
+    let receiverUser = null;
+    const form = document.getElementById("send-container");
+    const messageInput = document.getElementById("messageInp");
+    const messageContainer = document.querySelector(".user-chat-live");
+    const OnlineUserContainer = document.querySelector(".OnlineUserContainer");
+    function sendmsg() {
+        const msg = document.getElementById("messageInp").value;
+        if (!receiverUser) {
+            alert("please select a connected User")
+        }
+        console.log("receiverUser ----------- ", receiverUser)
+        if (msg.length != 0 && receiverUser != null) {
+            socket.emit("sendMsg", { msg: msg, receiverUser: receiverUser });
+            append(`${nameChatter}: ${msg}`, "right")
+        }
+        document.getElementById("messageInp").value = ""
+    }
+    const append = (message, position) => {
+        const messageElement = document.createElement("div");
+        messageElement.innerText = message;
+        messageElement.classList.add("message");
+        messageElement.classList.add(position);
+        messageContainer.append(messageElement);
+    }
+
+    socket.on("receive", data => {
+        if (nameChatter == data.name) {
+            append(`${data.name}: ${data.message}`, "right");
+        } else {
+            append(`${data.name}: ${data.message}`, "left");
+        }
+        messageContainer.scrollTop = messageContainer.scrollHeight
+    })
+
+    socket.on("connectedUserList", data => {
+        document.getElementById("test2").innerHTML = ""
+        const ul = document.createElement('ul');
+        Object.keys(data).map(keyName => {
+            if (keyName !== socket.id) {
+                const li = document.createElement('li');
+                li.textContent = data[keyName];
+                li.setAttribute("id", keyName);
+                li.setAttribute("class", "user-name")
+                ul.appendChild(li);
+                OnlineUserContainer.append(ul);
+            }
+        })
+    })
+    let chatterUser = null
+    OnlineUserContainer.addEventListener("click", function (event) {
+        if (event.target.classList.contains("user-name")) {
+            const getId = event.target.getAttribute("id"); // Use event.target instead of event
+            console.log("chatterUser==== ", chatterUser)
+            if (chatterUser !== getId) {
+                chatterUser = getId
+                document.getElementById("text-box").innerHTML = ""
+
+            }
+            const playerChat = {
+                userId: getId,
+                name: event.target.textContent
+            }
+            receiverUser = getId
+        }
+    });
+</script>
+
+</html>
